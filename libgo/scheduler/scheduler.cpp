@@ -8,6 +8,10 @@
 #include "ref.h"
 #include <thread>
 
+namespace sysutils {
+    extern void SetThreadName(const char *threadName);
+}
+
 namespace co
 {
 
@@ -226,6 +230,9 @@ void Scheduler::NewProcessThread()
     auto p = new Processer(this, processers_.size());
     DebugPrint(dbg_scheduler, "---> Create Processer(%d)", p->id_);
     std::thread t([this, p]{
+            char buf[100];
+            sprintf(buf, "processer:%d", p->id_);
+            ::sysutils::SetThreadName(buf);
             DebugPrint(dbg_thread, "Start process(sched=%p) thread id: %lu", (void*)this, NativeThreadID());
             p->Process();
             });
