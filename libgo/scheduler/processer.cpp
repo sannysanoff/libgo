@@ -9,19 +9,23 @@ namespace co {
 
 int Processer::s_check_ = 0;
 
-Processer::Processer(Scheduler * scheduler, int id)
-    : scheduler_(scheduler), id_(id)
+Processer::Processer(IScheduler * scheduler, int id)
+    : IProcesser(scheduler, id)
 {
     waitQueue_.setLock(&runnableQueue_.LockRef());
 }
 
-Processer* & Processer::GetCurrentProcesser()
+IProcesser* & Processer::GetCurrentProcesser()
 {
-    static thread_local Processer *proc = nullptr;
+    static thread_local IProcesser *proc = nullptr;
     return proc;
 }
 
-Scheduler* Processer::GetCurrentScheduler()
+IScheduler* Processer::GetScheduler() {
+    return scheduler_;
+}
+
+IScheduler* Processer::GetCurrentScheduler()
 {
     auto proc = GetCurrentProcesser();
     return proc ? proc->scheduler_ : nullptr;
@@ -296,7 +300,7 @@ SList<Task> Processer::Steal(std::size_t n)
     }
 }
 
-Processer::SuspendEntry Processer::Suspend()
+SuspendEntry Processer::Suspend()
 {
     Task* tk = GetCurrentTask();
     assert(tk);
@@ -304,7 +308,7 @@ Processer::SuspendEntry Processer::Suspend()
     return tk->proc_->SuspendBySelf(tk);
 }
 
-Processer::SuspendEntry Processer::Suspend(FastSteadyClock::duration dur)
+SuspendEntry Processer::Suspend(FastSteadyClock::duration dur)
 {
     SuspendEntry entry = Suspend();
     GetCurrentScheduler()->GetTimer().StartTimer(dur,
@@ -313,7 +317,7 @@ Processer::SuspendEntry Processer::Suspend(FastSteadyClock::duration dur)
             });
     return entry;
 }
-Processer::SuspendEntry Processer::Suspend(FastSteadyClock::time_point timepoint)
+SuspendEntry Processer::Suspend(FastSteadyClock::time_point timepoint)
 {
     SuspendEntry entry = Suspend();
     GetCurrentScheduler()->GetTimer().StartTimer(timepoint,
@@ -323,7 +327,7 @@ Processer::SuspendEntry Processer::Suspend(FastSteadyClock::time_point timepoint
     return entry;
 }
 
-Processer::SuspendEntry Processer::SuspendBySelf(Task* tk)
+SuspendEntry Processer::SuspendBySelf(Task* tk)
 {
     assert(tk == runningTask_);
     assert(tk->state_ == TaskState::runnable);
@@ -381,5 +385,15 @@ bool Processer::WakeupBySelf(IncursivePtr<Task> const& tkPtr, uint64_t id, std::
     return true;
 }
 
+Task* Processer_GetCurrentTask() {
+    return Processer::GetCurrentTask();
+}
+
+
+bool SuspendEntry::IsExpire() const {
+    return Processer::IsExpire(*this);
+}
+
 } //namespace co
+
 

@@ -13,26 +13,84 @@
 
 namespace co {
 
+class IScheduler;
 class Scheduler;
 
-// 协程执行器
+Task* Processer_GetCurrentTask();
+
+// 挂起标识
+struct SuspendEntry {
+    WeakPtr<Task> tk_;
+    uint64_t id_;
+
+    explicit operator bool() const { return !!tk_; }
+
+    friend bool operator==(SuspendEntry const& lhs, SuspendEntry const& rhs) {
+        return lhs.tk_ == rhs.tk_ && lhs.id_ == rhs.id_;
+    }
+
+    friend bool operator<(SuspendEntry const& lhs, SuspendEntry const& rhs) {
+        if (lhs.id_ == rhs.id_)
+            return lhs.tk_ < rhs.tk_;
+        return lhs.id_ < rhs.id_;
+    }
+
+    bool IsExpire() const ;
+};
+
+
+
+    // 协程执行器
 // 对应一个线程, 负责本线程的协程调度, 非线程安全.
-class Processer
+class IProcesser {
+
+public:
+
+    IScheduler * scheduler_;
+    Task* runningTask_{nullptr};
+
+    // 线程ID
+    int id_;
+
+    IProcesser(IScheduler * scheduler, int id): scheduler_(scheduler),  id_(id) {
+
+    }
+
+    ALWAYS_INLINE int Id() { return id_; }
+
+    ALWAYS_INLINE void CoYield()
+    {
+        Task *tk = Processer_GetCurrentTask();
+        assert(tk);
+
+        ++ tk->yieldCount_;
+
+#if ENABLE_DEBUGGER
+        DebugPrint(dbg_yield, "yield task(%s) state = %s", tk->DebugInfo(), GetTaskStateName(tk->state_));
+        if (Listener::GetTaskListener())
+            Listener::GetTaskListener()->onSwapOut(tk->id_);
+#endif
+
+        tk->SwapOut();
+    }
+
+    virtual SuspendEntry SuspendBySelf(Task* tk) = 0;
+
+    virtual bool WakeupBySelf(IncursivePtr<Task> const& tkPtr, uint64_t id, std::function<void()> const& functor) = 0;
+
+
+};
+class Processer : public IProcesser
 {
     friend class Scheduler;
 
 private:
-    Scheduler * scheduler_;
-
-    // 线程ID
-    int id_;
 
     // 激活态
     // 非激活的P仅仅是不能接受新的协程加入, 仍然可以强行AddTask并正常处理.
     volatile bool active_ = true;
 
     // 当前正在运行的协程
-    Task* runningTask_{nullptr};
     Task* nextTask_{nullptr};
 
     // 每轮调度只加有限次数新协程, 防止新协程创建新协程产生死循环
@@ -61,13 +119,12 @@ private:
     static int s_check_;
 
 public:
-    ALWAYS_INLINE int Id() { return id_; }
 
-    static Processer* & GetCurrentProcesser();
+    static IProcesser* & GetCurrentProcesser();
 
-    static Scheduler* GetCurrentScheduler();
+    static IScheduler* GetCurrentScheduler();
 
-    inline Scheduler* GetScheduler() { return scheduler_; }
+    IScheduler* GetScheduler();
 
     // 获取当前正在执行的协程
     static Task* GetCurrentTask();
@@ -77,28 +134,6 @@ public:
 
     // 协程切出
     ALWAYS_INLINE static void StaticCoYield();
-
-    // 挂起标识
-    struct SuspendEntry {
-        WeakPtr<Task> tk_;
-        uint64_t id_;
-
-        explicit operator bool() const { return !!tk_; }
-
-        friend bool operator==(SuspendEntry const& lhs, SuspendEntry const& rhs) {
-            return lhs.tk_ == rhs.tk_ && lhs.id_ == rhs.id_;
-        }
-
-        friend bool operator<(SuspendEntry const& lhs, SuspendEntry const& rhs) {
-            if (lhs.id_ == rhs.id_)
-                return lhs.tk_ < rhs.tk_;
-            return lhs.id_ < rhs.id_;
-        }
-
-        bool IsExpire() const {
-            return Processer::IsExpire(*this);
-        }
-    };
 
     // 挂起当前协程
     static SuspendEntry Suspend();
@@ -116,7 +151,7 @@ public:
     /// --------------------------------------
     // for friend class Scheduler
 private:
-    explicit Processer(Scheduler * scheduler, int id);
+    explicit Processer(IScheduler * scheduler, int id);
 
     // 待执行的协程数量
     // 暂兼用于负载指数
@@ -168,22 +203,6 @@ ALWAYS_INLINE void Processer::StaticCoYield()
 {
     auto proc = GetCurrentProcesser();
     if (proc) proc->CoYield();
-}
-
-ALWAYS_INLINE void Processer::CoYield()
-{
-    Task *tk = GetCurrentTask();
-    assert(tk);
-
-    ++ tk->yieldCount_;
-
-#if ENABLE_DEBUGGER
-    DebugPrint(dbg_yield, "yield task(%s) state = %s", tk->DebugInfo(), GetTaskStateName(tk->state_));
-    if (Listener::GetTaskListener())
-        Listener::GetTaskListener()->onSwapOut(tk->id_);
-#endif
-
-    tk->SwapOut();
 }
 
 

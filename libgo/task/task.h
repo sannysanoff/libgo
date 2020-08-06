@@ -22,14 +22,14 @@ typedef std::function<void()> TaskF;
 struct TaskGroupKey {};
 typedef Anys<TaskGroupKey> TaskAnys;
 
-class Processer;
+class IProcesser;
 
 struct Task
     : public TSQueueHook, public SharedRefObject, public CoDebugger::DebuggerBase<Task>
 {
     TaskState state_ = TaskState::runnable;
     uint64_t id_;
-    Processer* proc_ = nullptr;
+    IProcesser* proc_ = nullptr;
     Context ctx_;
     TaskF fn_;
     std::exception_ptr eptr_;           // 保存exception的指针

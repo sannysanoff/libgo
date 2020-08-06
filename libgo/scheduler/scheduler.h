@@ -18,10 +18,24 @@ struct TaskOpt
     const char* file_ = nullptr;
 };
 
-// 协程调度器
+typedef Timer<std::function<void()>> TimerType;
+
+
+    // 协程调度器
 // 负责管理1到N个调度线程, 调度从属协程.
 // 可以调用Create接口创建更多额外的调度器
-class Scheduler
+class IScheduler {
+public:
+    virtual void CreateTask(TaskF const& fn, TaskOpt const& opt) = 0;
+    virtual bool IsStop() = 0;
+    virtual ~IScheduler() {
+
+    }
+    virtual TimerType & GetTimer() = 0;
+
+};
+
+class Scheduler : public IScheduler
 {
     friend class Processer;
 
@@ -31,7 +45,7 @@ public:
     static Scheduler* Create();
 
     // 创建一个协程
-    void CreateTask(TaskF const& fn, TaskOpt const& opt);
+    void CreateTask(TaskF const& fn, TaskOpt const& opt) override;
 
     // 当前是否处于协程中
     bool IsCoroutine();
@@ -68,12 +82,10 @@ public:
     // 设置当前协程调试信息, 打印调试信息时将回显
     void SetCurrentTaskDebugInfo(std::string const& info);
 
-    typedef Timer<std::function<void()>> TimerType;
-
 public:
-    inline TimerType & GetTimer() { return timer_ ? *timer_ : StaticGetTimer(); }
+    TimerType & GetTimer() override { return timer_ ? *timer_ : StaticGetTimer(); }
 
-    inline bool IsStop() { return stop_; }
+    bool IsStop() override { return stop_; }
 
     static bool& IsExiting();
 

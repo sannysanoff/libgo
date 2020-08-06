@@ -45,7 +45,7 @@ private:
 
         atomic_t<int> suspendFlags {0};
 
-        Processer::SuspendEntry coroEntry;
+        SuspendEntry coroEntry;
 
         T value;
 
@@ -224,7 +224,7 @@ public:
 
 private:
     template <typename TimeType>
-    inline void coroSuspend(Processer::SuspendEntry & coroEntry, TimeType * time)
+    inline void coroSuspend(SuspendEntry & coroEntry, TimeType * time)
     {
         if (time)
             coroEntry = Processer::Suspend(*time);

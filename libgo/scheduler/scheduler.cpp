@@ -204,8 +204,8 @@ void Scheduler::UseAloneTimerThread()
     timer_ = timer;
 }
 
-static Scheduler::TimerType& staticGetTimer() {
-    static Scheduler::TimerType *ptimer = new Scheduler::TimerType;
+static TimerType& staticGetTimer() {
+    static TimerType *ptimer = new TimerType;
     std::thread *pt = new std::thread([=]{ 
             DebugPrint(dbg_thread, "Start global timer thread id: %lu", NativeThreadID());
             ptimer->ThreadRun();
@@ -220,7 +220,7 @@ static Scheduler::TimerType& staticGetTimer() {
     return *ptimer;
 }
 
-Scheduler::TimerType & Scheduler::StaticGetTimer() {
+TimerType & Scheduler::StaticGetTimer() {
     static TimerType & timer = staticGetTimer();
     return timer;
 }
@@ -388,13 +388,13 @@ void Scheduler::DispatcherThread()
 void Scheduler::AddTask(Task* tk)
 {
     DebugPrint(dbg_scheduler, "Add task(%s) to runnable list.", tk->DebugInfo());
-    auto proc = tk->proc_;
+    auto proc = static_cast<Processer *>(tk->proc_);
     if (proc && proc->active_) {
         proc->AddTask(tk);
         return ;
     }
 
-    proc = Processer::GetCurrentProcesser();
+    proc = static_cast<Processer *>(Processer::GetCurrentProcesser());
     if (proc && proc->active_ && proc->GetScheduler() == this) {
         proc->AddTask(tk);
         return ;

@@ -9,12 +9,12 @@ class ReactorElement
 {
 public:
     struct Entry {
-        Processer::SuspendEntry suspendEntry_;
+        SuspendEntry suspendEntry_;
         std::shared_ptr<short int> revents_;
         int idx_;
 
         Entry() {}
-        Entry(Processer::SuspendEntry const& suspendEntry,
+        Entry(SuspendEntry const& suspendEntry,
                 std::shared_ptr<short int> const& revents,
                 int idx)
             : suspendEntry_(suspendEntry), revents_(revents), idx_(idx)

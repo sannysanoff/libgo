@@ -17,9 +17,9 @@ struct __go_option;
 template <>
 struct __go_option<opt_scheduler>
 {
-    Scheduler* scheduler_;
-    explicit __go_option(Scheduler* scheduler) : scheduler_(scheduler) {}
-    explicit __go_option(Scheduler& scheduler) : scheduler_(&scheduler) {}
+    IScheduler* scheduler_;
+    explicit __go_option(IScheduler* scheduler) : scheduler_(scheduler) {}
+    explicit __go_option(IScheduler& scheduler) : scheduler_(&scheduler) {}
 };
 
 template <>
@@ -72,7 +72,7 @@ struct __go
     }
 
     TaskOpt opt_;
-    Scheduler* scheduler_;
+    IScheduler* scheduler_;
 };
 
 //template <typename R>
