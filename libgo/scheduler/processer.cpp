@@ -15,10 +15,10 @@ Processer::Processer(IScheduler * scheduler, int id)
     waitQueue_.setLock(&runnableQueue_.LockRef());
 }
 
+thread_local IProcesser *currentProc = nullptr;
 IProcesser* & Processer::GetCurrentProcesser()
 {
-    static thread_local IProcesser *proc = nullptr;
-    return proc;
+    return currentProc;
 }
 
 IScheduler* Processer::GetScheduler() {
@@ -78,11 +78,15 @@ void Processer::Process()
 
     while (!scheduler_->IsStop())
     {
-        runnableQueue_.front(runningTask_);
+        Task *tsk;
+        runnableQueue_.front(tsk);
+        runningTask_ = tsk;
 
         if (!runningTask_) {
-            if (AddNewTasks())
-                runnableQueue_.front(runningTask_);
+            if (AddNewTasks()) {
+                runnableQueue_.front(tsk);
+                runningTask_ = tsk;
+            }
 
             if (!runningTask_) {
                 WaitCondition();
@@ -97,31 +101,31 @@ void Processer::Process()
 
         addNewQuota_ = 1;
         while (runningTask_ && !scheduler_->IsStop()) {
-            runningTask_->state_ = TaskState::runnable;
-            runningTask_->proc_ = this;
+            getRunningTask()->state_ = TaskState::runnable;
+            getRunningTask()->proc_ = this;
 
 #if ENABLE_DEBUGGER
-            DebugPrint(dbg_switch, "enter task(%s)", runningTask_->DebugInfo());
+            DebugPrint(dbg_switch, "enter task(%s)", getRunningTask()->DebugInfo());
             if (Listener::GetTaskListener())
-                Listener::GetTaskListener()->onSwapIn(runningTask_->id_);
+                Listener::GetTaskListener()->onSwapIn(getRunningTask()->id_);
 #endif
 
             ++switchCount_;
 
-            runningTask_->SwapIn();
+            getRunningTask()->SwapIn();
 
 #if ENABLE_DEBUGGER
-            DebugPrint(dbg_switch, "leave task(%s) state=%d", runningTask_->DebugInfo(), (int)runningTask_->state_);
+            DebugPrint(dbg_switch, "leave task(%s) state=%d", getRunningTask()->DebugInfo(), (int)getRunningTask()->state_);
 #endif
 
-            switch (runningTask_->state_) {
+            switch (getRunningTask()->state_) {
                 case TaskState::runnable:
                     {
                         std::unique_lock<TaskQueue::lock_t> lock(runnableQueue_.LockRef());
-                        auto next = (Task*)runningTask_->next;
+                        auto next = (Task*)getRunningTask()->next;
                         if (next) {
                             runningTask_ = next;
-                            runningTask_->check_ = runnableQueue_.check_;
+                            getRunningTask()->check_ = runnableQueue_.check_;
                             break;
                         }
 
@@ -130,7 +134,9 @@ void Processer::Process()
                         } else {
                             lock.unlock();
                             if (AddNewTasks()) {
-                                runnableQueue_.next(runningTask_, runningTask_);
+                                Task *tsk;
+                                runnableQueue_.next(getRunningTask(), tsk);
+                                runningTask_ = tsk;
                                 -- addNewQuota_;
                             } else {
                                 std::unique_lock<TaskQueue::lock_t> lock2(runnableQueue_.LockRef());
@@ -152,21 +158,23 @@ void Processer::Process()
                 case TaskState::done:
                 default:
                     {
-                        runnableQueue_.next(runningTask_, nextTask_);
+                        runnableQueue_.next(getRunningTask(), nextTask_);
                         if (!nextTask_ && addNewQuota_ > 0) {
                             if (AddNewTasks()) {
-                                runnableQueue_.next(runningTask_, nextTask_);
+                                Task *tsk;
+                                runnableQueue_.next(getRunningTask(), tsk);
+                                nextTask_ = tsk;
                                 -- addNewQuota_;
                             }
                         }
 
-                        DebugPrint(dbg_task, "task(%s) done.", runningTask_->DebugInfo());
-                        runnableQueue_.erase(runningTask_);
+                        DebugPrint(dbg_task, "task(%s) done.", getRunningTask()->DebugInfo());
+                        runnableQueue_.erase(getRunningTask());
                         if (gcQueue_.size() > 16)
                             GC();
-                        gcQueue_.push(runningTask_);
-                        if (runningTask_->eptr_) {
-                            std::exception_ptr ep = runningTask_->eptr_;
+                        gcQueue_.push(getRunningTask());
+                        if (getRunningTask()->eptr_) {
+                            std::exception_ptr ep = getRunningTask()->eptr_;
                             std::rethrow_exception(ep);
                         }
 
@@ -180,7 +188,7 @@ void Processer::Process()
     }
 }
 
-Task* Processer::GetCurrentTask()
+ITask* Processer::GetCurrentTask()
 {
     auto proc = GetCurrentProcesser();
     return proc ? proc->runningTask_ : nullptr;
@@ -260,12 +268,12 @@ SList<Task> Processer::Steal(std::size_t n)
         std::unique_lock<TaskQueue::lock_t> lock(runnableQueue_.LockRef());
         bool pushRunningTask = false, pushNextTask = false;
         if (runningTask_)
-            pushRunningTask = runnableQueue_.eraseWithoutLock(runningTask_, true) || slist.erase(runningTask_, newQueue_.check_);
+            pushRunningTask = runnableQueue_.eraseWithoutLock(getRunningTask(), true) || slist.erase(getRunningTask(), newQueue_.check_);
         if (nextTask_)
             pushNextTask = runnableQueue_.eraseWithoutLock(nextTask_, true) || slist.erase(nextTask_, newQueue_.check_);
         auto slist2 = runnableQueue_.pop_backWithoutLock(n - slist.size());
         if (pushRunningTask)
-            runnableQueue_.pushWithoutLock(runningTask_);
+            runnableQueue_.pushWithoutLock(getRunningTask());
         if (pushNextTask)
             runnableQueue_.pushWithoutLock(nextTask_);
         lock.unlock();
@@ -283,12 +291,12 @@ SList<Task> Processer::Steal(std::size_t n)
         std::unique_lock<TaskQueue::lock_t> lock(runnableQueue_.LockRef());
         bool pushRunningTask = false, pushNextTask = false;
         if (runningTask_)
-            pushRunningTask = runnableQueue_.eraseWithoutLock(runningTask_, true) || slist.erase(runningTask_, newQueue_.check_);
+            pushRunningTask = runnableQueue_.eraseWithoutLock(getRunningTask(), true) || slist.erase(getRunningTask(), newQueue_.check_);
         if (nextTask_)
             pushNextTask = runnableQueue_.eraseWithoutLock(nextTask_, true) || slist.erase(nextTask_, newQueue_.check_);
         auto slist2 = runnableQueue_.pop_allWithoutLock();
         if (pushRunningTask)
-            runnableQueue_.pushWithoutLock(runningTask_);
+            runnableQueue_.pushWithoutLock(getRunningTask());
         if (pushNextTask)
             runnableQueue_.pushWithoutLock(nextTask_);
         lock.unlock();
@@ -302,7 +310,7 @@ SList<Task> Processer::Steal(std::size_t n)
 
 SuspendEntry Processer::Suspend()
 {
-    Task* tk = GetCurrentTask();
+    Task* tk = static_cast<Task *>(GetCurrentTask());
     assert(tk);
     assert(tk->proc_);
     return tk->proc_->SuspendBySelf(tk);
@@ -336,11 +344,11 @@ SuspendEntry Processer::SuspendBySelf(Task* tk)
     uint64_t id = ++ TaskRefSuspendId(tk);
 
     std::unique_lock<TaskQueue::lock_t> lock(runnableQueue_.LockRef());
-    runnableQueue_.nextWithoutLock(runningTask_, nextTask_);
-    runnableQueue_.eraseWithoutLock(runningTask_, false, false);
+    runnableQueue_.nextWithoutLock(getRunningTask(), nextTask_);
+    runnableQueue_.eraseWithoutLock(getRunningTask(), false, false);
 
     DebugPrint(dbg_suspend, "tk(%s) Suspend. nextTask(%s)", tk->DebugInfo(), nextTask_->DebugInfo());
-    waitQueue_.pushWithoutLock(runningTask_, false);
+    waitQueue_.pushWithoutLock(getRunningTask(), false);
     return SuspendEntry{ WeakPtr<Task>(tk), id };
 }
 
@@ -385,7 +393,7 @@ bool Processer::WakeupBySelf(IncursivePtr<Task> const& tkPtr, uint64_t id, std::
     return true;
 }
 
-Task* Processer_GetCurrentTask() {
+ITask* Processer_GetCurrentTask() {
     return Processer::GetCurrentTask();
 }
 

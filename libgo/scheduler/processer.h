@@ -16,7 +16,7 @@ namespace co {
 class IScheduler;
 class Scheduler;
 
-Task* Processer_GetCurrentTask();
+ITask* Processer_GetCurrentTask();
 
 // 挂起标识
 struct SuspendEntry {
@@ -47,7 +47,7 @@ class IProcesser {
 public:
 
     IScheduler * scheduler_;
-    Task* runningTask_{nullptr};
+    ITask* runningTask_{nullptr};
 
     // 线程ID
     int id_;
@@ -60,7 +60,7 @@ public:
 
     ALWAYS_INLINE void CoYield()
     {
-        Task *tk = Processer_GetCurrentTask();
+        ITask *tk = Processer_GetCurrentTask();
         assert(tk);
 
         ++ tk->yieldCount_;
@@ -80,6 +80,9 @@ public:
 
 
 };
+
+extern thread_local IProcesser *currentProc;
+
 class Processer : public IProcesser
 {
     friend class Scheduler;
@@ -92,6 +95,10 @@ private:
 
     // 当前正在运行的协程
     Task* nextTask_{nullptr};
+
+    inline Task *getRunningTask(){
+        return static_cast<Task *>(runningTask_);
+    }
 
     // 每轮调度只加有限次数新协程, 防止新协程创建新协程产生死循环
     int addNewQuota_ = 0;
@@ -127,7 +134,7 @@ public:
     IScheduler* GetScheduler();
 
     // 获取当前正在执行的协程
-    static Task* GetCurrentTask();
+    static ITask* GetCurrentTask();
 
     // 是否在协程中
     static bool IsCoroutine();

@@ -80,7 +80,7 @@ void FCONTEXT_CALL Task::StaticRun(intptr_t vp)
 }
 
 Task::Task(TaskF const& fn, std::size_t stack_size)
-    : ctx_(&Task::StaticRun, (intptr_t)this, stack_size), fn_(fn)
+    : ITask(0L, &Task::StaticRun, (intptr_t)this, stack_size), fn_(fn)
 {
 //    DebugPrint(dbg_task, "task(%s) construct. this=%p", DebugInfo(), this);
 }
@@ -93,10 +93,14 @@ Task::~Task()
 //    DebugPrint(dbg_task, "task(%s) destruct. this=%p", DebugInfo(), this);
 }
 
+const char* ITask::DebugInfo()
+{
+    return "";
+}
+
 const char* Task::DebugInfo()
 {
     if (reinterpret_cast<void*>(this) == nullptr) return "nil";
-
     return TaskDebugInfo(this);
 }
 

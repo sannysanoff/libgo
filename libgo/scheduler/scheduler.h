@@ -28,6 +28,7 @@ class IScheduler {
 public:
     virtual void CreateTask(TaskF const& fn, TaskOpt const& opt) = 0;
     virtual bool IsStop() = 0;
+    virtual void Stop() = 0;
     virtual ~IScheduler() {
 
     }
@@ -65,7 +66,7 @@ public:
     // 停止调度 
     // 注意: 停止后无法恢复, 仅用于安全退出main函数, 不保证终止所有线程.
     //       如果某个调度线程被协程阻塞, 必须等待阻塞结束才能退出.
-    void Stop();
+    void Stop() override;
 
     // 使用独立的定时器线程
     void UseAloneTimerThread();
@@ -81,6 +82,9 @@ public:
 
     // 设置当前协程调试信息, 打印调试信息时将回显
     void SetCurrentTaskDebugInfo(std::string const& info);
+
+    static TimerType & StaticGetTimer();
+
 
 public:
     TimerType & GetTimer() override { return timer_ ? *timer_ : StaticGetTimer(); }
@@ -109,8 +113,6 @@ private:
     void DispatcherThread();
 
     void NewProcessThread();
-
-    TimerType & StaticGetTimer();
 
     // deque of Processer, write by start or dispatch thread
     Deque<Processer*> processers_;

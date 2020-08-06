@@ -24,24 +24,19 @@ typedef Anys<TaskGroupKey> TaskAnys;
 
 class IProcesser;
 
-struct Task
-    : public TSQueueHook, public SharedRefObject, public CoDebugger::DebuggerBase<Task>
-{
-    TaskState state_ = TaskState::runnable;
+struct ITask {
     uint64_t id_;
-    IProcesser* proc_ = nullptr;
-    Context ctx_;
-    TaskF fn_;
-    std::exception_ptr eptr_;           // 保存exception的指针
     TaskAnys anys_;
-
+    Context ctx_;
     uint64_t yieldCount_ = 0;
 
-    atomic_t<uint64_t> suspendId_ {0};
 
-    Task(TaskF const& fn, std::size_t stack_size);
-    ~Task();
+    ITask(uint64_t id, fn_t fn, intptr_t vp, std::size_t stackSize) : id_(id), ctx_(fn, vp, stackSize) {
+    }
 
+    uint64_t getId() {
+        return id_;
+    }
     ALWAYS_INLINE void SwapIn()
     {
         ctx_.SwapIn();
@@ -54,8 +49,24 @@ struct Task
     {
         ctx_.SwapOut();
     }
+    virtual const char* DebugInfo();
+    TaskState state_ = TaskState::runnable;
 
-    const char* DebugInfo();
+
+};
+
+struct Task : public ITask, public TSQueueHook, public SharedRefObject, public CoDebugger::DebuggerBase<Task>
+{
+    IProcesser* proc_ = nullptr;
+    TaskF fn_;
+    std::exception_ptr eptr_;           // 保存exception的指针
+
+    atomic_t<uint64_t> suspendId_ {0};
+
+    Task(TaskF const& fn, std::size_t stack_size);
+    ~Task();
+    const char* DebugInfo() override;
+
 
 private:
     void Run();
@@ -68,9 +79,9 @@ private:
     Task& operator=(Task &&) = delete;
 };
 
-#define TaskInitPtr reinterpret_cast<Task*>(0x1)
+#define TaskInitPtr reinterpret_cast<ITask*>(0x1)
 #define TaskRefDefine(type, name) \
-    ALWAYS_INLINE type& TaskRef ## name(Task *tk) \
+    ALWAYS_INLINE type& TaskRef ## name(ITask *tk) \
     { \
         typedef type T; \
         static int idx = -1; \

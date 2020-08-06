@@ -12,7 +12,7 @@ namespace co
 
     dismisser*& dismisser::GetLastDefer()
     {
-        Task* tk = Processer::GetCurrentTask();
+        ITask* tk = Processer::GetCurrentTask();
         if (tk) {
             CLS_REF(dismisser*) defer_cls = CLS(dismisser*, nullptr);
             return (dismisser*&)defer_cls;

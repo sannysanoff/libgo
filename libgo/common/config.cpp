@@ -82,8 +82,8 @@ int GetCurrentThreadID()
 
 int GetCurrentCoroID()
 {
-    Task* tk = Processer::GetCurrentTask();
-    return tk ? tk->id_ : 0;
+    ITask* tk = Processer::GetCurrentTask();
+    return tk ? tk->getId() : 0;
 }
 
 std::string GetCurrentTimeStr()

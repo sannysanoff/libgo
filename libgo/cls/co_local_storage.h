@@ -28,7 +28,7 @@ extern CLSMap* GetThreadLocalCLSMap();
 
 template <typename T, typename ... Args>
 T& GetSpecific(CLSLocation loc, Args && ... args) {
-    Task* tk = Processer::GetCurrentTask();
+    ITask* tk = Processer::GetCurrentTask();
     CLSMap *m = tk ? &TaskRefClsMap(tk) : GetThreadLocalCLSMap();
 
     any& val = m->Get(loc);

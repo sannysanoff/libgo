@@ -418,19 +418,19 @@ uint32_t Scheduler::TaskCount()
 
 uint64_t Scheduler::GetCurrentTaskID()
 {
-    Task* tk = Processer::GetCurrentTask();
+    Task* tk = static_cast<Task *>(Processer::GetCurrentTask());
     return tk ? tk->id_ : 0;
 }
 
 uint64_t Scheduler::GetCurrentTaskYieldCount()
 {
-    Task* tk = Processer::GetCurrentTask();
+    Task* tk = static_cast<Task *>(Processer::GetCurrentTask());
     return tk ? tk->yieldCount_ : 0;
 }
 
 void Scheduler::SetCurrentTaskDebugInfo(std::string const& info)
 {
-    Task* tk = Processer::GetCurrentTask();
+    Task* tk = static_cast<Task *>(Processer::GetCurrentTask());
     if (!tk) return ;
     TaskRefDebugInfo(tk) = info;
 }
