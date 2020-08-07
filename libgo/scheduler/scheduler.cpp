@@ -394,20 +394,36 @@ void Scheduler::AddTask(Task* tk)
         return ;
     }
 
-    proc = static_cast<Processer *>(Processer::GetCurrentProcesser());
-    if (proc && proc->active_ && proc->GetScheduler() == this) {
-        proc->AddTask(tk);
-        return ;
-    }
+//    proc = static_cast<Processer *>(Processer::GetCurrentProcesser());
+//    if (proc && proc->active_ && proc->GetScheduler() == this) {
+//        proc->AddTask(tk);
+//        return ;
+//    }
 
     std::size_t pcount = processers_.size();
-    std::size_t idx = lastActive_;
-    for (std::size_t i = 0; i < pcount; ++i, ++idx) {
-        idx = idx % pcount;
+//    std::size_t idx = lastActive_;
+    int minSize;
+    int minProc;
+    for (std::size_t i = 0; i < pcount; ++i) {
+//        idx = idx % pcount;
+        auto idx = i;
         proc = processers_[idx];
-        if (proc && proc->active_)
-            break;
+        int qs = proc->runnableQueue_.size();
+        if (i == 0) {
+            minSize = qs;
+            minProc = 0;
+        } else {
+
+            if (qs < minSize) {
+                minProc = i;
+                minSize = qs;
+            }
+        }
+
+//        if (proc && proc->active_)
+//            break;
     }
+    proc = processers_[minProc];
     proc->AddTask(tk);
 }
 

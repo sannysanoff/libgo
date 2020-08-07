@@ -18,6 +18,7 @@
 
 #define go_alias ::co::__go(__FILE__, __LINE__)-
 #define go go_alias
+#define go_fn(f,l) ::co::__go(f, l)-
 
 // create coroutine options
 #define co_stack(size) ::co::__go_option<::co::opt_stack_size>{size}-
