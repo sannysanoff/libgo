@@ -93,6 +93,8 @@ public:
 
     static bool& IsExiting();
 
+    Deque<Processer*> processers_;
+
 private:
     Scheduler();
     ~Scheduler();
@@ -115,7 +117,6 @@ private:
     void NewProcessThread();
 
     // deque of Processer, write by start or dispatch thread
-    Deque<Processer*> processers_;
 
     LFLock started_;
 

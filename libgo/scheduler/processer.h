@@ -111,12 +111,8 @@ private:
     volatile uint64_t switchCount_ = 0;
 
     // 协程队列
-    typedef TSQueue<Task, true> TaskQueue;
-    TaskQueue runnableQueue_;
-    TaskQueue waitQueue_;
     TSQueue<Task, false> gcQueue_;
 
-    TaskQueue newQueue_;
 
     // 等待的条件变量
     std::condition_variable_any cv_;
@@ -126,6 +122,11 @@ private:
     static int s_check_;
 
 public:
+
+    typedef TSQueue<Task, true> TaskQueue;
+    TaskQueue runnableQueue_;
+    TaskQueue waitQueue_;
+    TaskQueue newQueue_;
 
     static IProcesser* & GetCurrentProcesser();
 
