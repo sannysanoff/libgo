@@ -4,6 +4,7 @@
 #include "../common/clock.h"
 #include <assert.h>
 #include "ref.h"
+#include <chrono>
 
 namespace co {
 
@@ -68,6 +69,13 @@ void Processer::NotifyCondition()
     }
 }
 
+static long long currentTimeMillis() {
+    std::chrono::system_clock::time_point t1 = std::chrono::system_clock::now();
+    long long msec = std::chrono::time_point_cast<std::chrono::milliseconds>(t1).time_since_epoch().count();
+    return msec;
+}
+
+
 void Processer::Process()
 {
     GetCurrentProcesser() = this;
@@ -111,8 +119,13 @@ void Processer::Process()
 #endif
 
             ++switchCount_;
-
+            ++processedCount;
+            auto t0 = currentTimeMillis();
+            lastStart = t0;
             getRunningTask()->SwapIn();
+            lastStart = 0;
+            auto t1 = currentTimeMillis();
+            processedDur += t1-t0;
 
 #if ENABLE_DEBUGGER
             DebugPrint(dbg_switch, "leave task(%s) state=%d", getRunningTask()->DebugInfo(), (int)getRunningTask()->state_);

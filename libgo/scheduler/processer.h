@@ -123,6 +123,10 @@ private:
 
 public:
 
+    volatile uint64_t processedCount = 0;
+    volatile uint64_t processedDur = 0;
+    volatile uint64_t lastStart = 0;
+
     typedef TSQueue<Task, true> TaskQueue;
     TaskQueue runnableQueue_;
     TaskQueue waitQueue_;
