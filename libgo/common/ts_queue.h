@@ -207,10 +207,10 @@ public:
     lock_t *lock_;
     TSQueueHook* head_;
     TSQueueHook* tail_;
-    volatile std::size_t count_;
     void *check_; // 可选的erase检测
 
 public:
+        volatile std::size_t count_;
     TSQueue()
     {
         head_ = tail_ = new TSQueueHook;

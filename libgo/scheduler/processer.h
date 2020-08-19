@@ -123,7 +123,7 @@ private:
 
 public:
 
-    volatile uint64_t processedCount = 0;
+    volatile int32_t processedCount = 0;
     volatile uint64_t processedDur = 0;
     volatile uint64_t lastStart = 0;
 
