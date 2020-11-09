@@ -408,7 +408,7 @@ void Scheduler::AddTask(Task* tk)
 //        idx = idx % pcount;
         auto idx = i;
         proc = processers_[idx];
-        int qs = proc->runnableQueue_.size();
+        int qs = proc->runnableQueue_.size() + proc->newQueue_.size();
         if (i == 0) {
             minSize = qs;
             minProc = 0;
@@ -423,6 +423,7 @@ void Scheduler::AddTask(Task* tk)
 //        if (proc && proc->active_)
 //            break;
     }
+//    printf("Added to processer: %d size=%d\n", minProc, minSize);
     proc = processers_[minProc];
     proc->AddTask(tk);
 }
