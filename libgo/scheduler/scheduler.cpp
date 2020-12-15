@@ -249,6 +249,7 @@ void Scheduler::DispatcherThread()
         std::this_thread::sleep_for(std::chrono::microseconds(CoroutineOptions::getInstance().dispatcher_thread_cycle_us));
 
         // 1.收集负载值, 收集阻塞状态, 打阻塞标记, 唤醒处于等待状态但是有任务的P
+        // 1. Collect load value, collect blocking state, mark blocking, wake up P that is in waiting state but has task
         idx_t pcount = processers_.size();
         std::size_t totalLoadaverage = 0;
         typedef std::multimap<std::size_t, idx_t> ActiveMap;
@@ -270,7 +271,7 @@ void Scheduler::DispatcherThread()
                 isActiveCount++;
         }
 
-        // 还可激活几个P
+        // 还可激活几个P    You can also activate several P
         int activeQuota = isActiveCount < minThreadNumber_ ? (minThreadNumber_ - isActiveCount) : 0;
 
         for (std::size_t i = 0; i < pcount; i++) {
@@ -298,18 +299,18 @@ void Scheduler::DispatcherThread()
         }
 
         if (actives.empty() && (int)pcount < maxThreadNumber_) {
-            // 全部阻塞, 并且还有协程待执行, 起新线程
+            // 全部阻塞, 并且还有协程待执行, 起新线程  All blocked, and there are still coroutines to be executed, start a new thread
             NewProcessThread();
             actives.insert(ActiveMap::value_type{0, pcount});
             ++pcount;
         }
 
-        // 全部阻塞并且不能起新线程, 无需调度, 等待即可
+        // 全部阻塞并且不能起新线程, 无需调度, 等待即可 All are blocked and cannot start new threads, no need to schedule, just wait
         if (actives.empty())
             continue;
 
-        // 2.负载均衡
-        // 阻塞线程的任务steal出来
+        // 2.负载均衡 Load balancing
+        // 阻塞线程的任务steal出来   The task that blocks the thread is steal out
         {
             SList<Task> tasks;
             for (auto &kv : blockings) {
@@ -349,7 +350,7 @@ void Scheduler::DispatcherThread()
             }
         }
 
-        // 如果还有在等待的线程, 从任务多的线程中拿一些给它
+        // 如果还有在等待的线程, 从任务多的线程中拿一些给它 If there are still waiting threads, give it some from the threads with more tasks
         if (actives.begin()->first == 0) {
             auto range = actives.equal_range(actives.begin()->first);
             std::size_t waitN = std::distance(range.first, range.second);

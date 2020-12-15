@@ -96,14 +96,13 @@ private:
     // 当前正在运行的协程
     Task* nextTask_{nullptr};
 
-    inline Task *getRunningTask(){
-        return static_cast<Task *>(runningTask_);
-    }
+    Task *getRunningTask();
 
     // 每轮调度只加有限次数新协程, 防止新协程创建新协程产生死循环
     int addNewQuota_ = 0;
 
     // 当前正在运行的协程本次调度开始的时间戳(Dispatch线程专用)
+    // The timestamp of the start of the current scheduling of the currently running coroutine (only for the Dispatch thread)
     volatile int64_t markTick_ = 0;
     volatile uint64_t markSwitch_ = 0;
 

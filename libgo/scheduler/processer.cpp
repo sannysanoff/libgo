@@ -303,15 +303,20 @@ SList<Task> Processer::Steal(std::size_t n)
 
         std::unique_lock<TaskQueue::lock_t> lock(runnableQueue_.LockRef());
         bool pushRunningTask = false, pushNextTask = false;
-        if (runningTask_)
+        bool pushRunningTask2 = pushRunningTask;
+        if (getRunningTask())
             pushRunningTask = runnableQueue_.eraseWithoutLock(getRunningTask(), true) || slist.erase(getRunningTask(), newQueue_.check_);
         if (nextTask_)
             pushNextTask = runnableQueue_.eraseWithoutLock(nextTask_, true) || slist.erase(nextTask_, newQueue_.check_);
+        bool pushRunningTask3 = pushRunningTask;
         auto slist2 = runnableQueue_.pop_allWithoutLock();
-        if (pushRunningTask)
+        if (pushRunningTask) {
+//            std::cout << "pushRunningTask = " << pushRunningTask << " grt=" << (void*)getRunningTask() <<  " " << pushRunningTask2 << " " << pushRunningTask3 << std::endl;
             runnableQueue_.pushWithoutLock(getRunningTask());
-        if (pushNextTask)
+        }
+        if (pushNextTask) {
             runnableQueue_.pushWithoutLock(nextTask_);
+        }
         lock.unlock();
 
         slist2.append(std::move(slist));
@@ -418,3 +423,10 @@ bool SuspendEntry::IsExpire() const {
 } //namespace co
 
 
+co::Task *co::Processer::getRunningTask(){
+    auto rv = static_cast<Task *>(runningTask_);
+    if (!rv && runningTask_) {
+        std::cerr << "Here diff" << std::endl;
+    }
+    return rv;
+}
