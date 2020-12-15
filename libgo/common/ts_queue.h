@@ -2,6 +2,7 @@
 #include "config.h"
 #include "util.h"
 #include "spinlock.h"
+#include <iostream>
 
 namespace co
 {
@@ -111,6 +112,7 @@ public:
         other.stealed();
     }
 
+    // take (remove) N items from this list.
     SList<T> cut(std::size_t n) {
         if (empty()) return SList<T>();
 
@@ -133,6 +135,11 @@ public:
 
         count_ -= n;
         head_ = (T*)pos->next;
+        if (!head_) {
+            // concurrency here?
+            std::cerr << "SList::cut: head is null" << std::endl;
+            abort();
+        }
         pos->unlink(head_);
         return o;
     }
