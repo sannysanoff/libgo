@@ -185,6 +185,7 @@ void Scheduler::Stop()
     if (timerThread_.joinable())
         timerThread_.join();
 }
+
 void Scheduler::UseAloneTimerThread()
 {
     TimerType * timer = new TimerType;
@@ -409,7 +410,7 @@ void Scheduler::AddTask(Task* tk)
 //        idx = idx % pcount;
         auto idx = i;
         proc = processers_[idx];
-        int qs = proc->runnableQueue_.size() + proc->newQueue_.size();
+        int qs = proc->runnableQueue_.count_ + proc->newQueue_.count_;
         if (i == 0) {
             minSize = qs;
             minProc = 0;
