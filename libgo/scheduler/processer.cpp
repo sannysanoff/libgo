@@ -214,7 +214,7 @@ bool Processer::IsCoroutine()
 
 std::size_t Processer::RunnableSize()
 {
-    return runnableQueue_.size() + newQueue_.size();
+    return runnableQueue_.count_ + newQueue_.count_;
 }
 
 void Processer::WaitCondition()
