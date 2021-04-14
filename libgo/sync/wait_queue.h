@@ -85,7 +85,7 @@ public:
         }
 
         // check
-        if (count_ < (std::max)(posDistance_, posDistance_ + 16)) return ret;
+        if (count_ < (std::max)(posDistance_, posDistance_ + 16384)) return ret;
         if (!checkFunctor_) return ret;
 
         if (!check_ || !check_->next)
@@ -109,6 +109,19 @@ public:
             check_ = check_->next;
         }
         return ret;
+    }
+
+    int scan_count()
+    {
+        std::unique_lock<lock_t> lock(lock_);
+        if (head_ == tail_) return 0;
+        auto scan = head_;
+        int count = 0;
+        while(scan) {
+            scan = scan->next;
+            count++;
+        }
+        return count;
     }
 
     bool pop(T* & ptr)

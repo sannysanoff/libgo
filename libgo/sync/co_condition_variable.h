@@ -125,7 +125,6 @@ private:
         }
     };
 
-    WaitQueue<Entry> queue_;
 
     bool relockAfterWait_ = true;
 
@@ -143,6 +142,7 @@ public:
     typedef typename WaitQueue<Entry>::CondRet CondRet;
 
 public:
+    WaitQueue<Entry> queue_;
     explicit ConditionVariableAnyT(size_t nonblockingCapacity = 0,
             Functor convertToNonblockingFunctor = NULL)
         : queue_(&isValid, nonblockingCapacity,
