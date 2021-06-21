@@ -251,6 +251,7 @@ bool Processer::AddNewTasks()
 
 bool Processer::IsBlocking()
 {
+    if (true) return false; // we disable blocking checkes at all.
     if (!markSwitch_ || markSwitch_ != switchCount_) return false;
     return NowMicrosecond() > markTick_ + CoroutineOptions::getInstance().cycle_timeout_us;
 }
